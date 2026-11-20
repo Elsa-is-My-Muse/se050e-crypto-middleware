@@ -1,0 +1,18 @@
+name: Feature request / 功能建议
+description: Propose an API, port or documentation improvement.
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 使用场景
+      description: Describe the concrete use case and current limitation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal / 建议方案
+      description: Include affected platforms, compatibility requirements and alternatives.
+    validations:
+      required: true

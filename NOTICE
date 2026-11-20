@@ -1,0 +1,12 @@
+SE050E Crypto Middleware
+Copyright 2026 Elsa-is-My-Muse contributors
+
+This project includes a modified transport subset from NXP's
+se05x_mw_v04.08.01/simw-top middleware, licensed under Apache-2.0.
+Original NXP copyright and license notices are retained in nxp/.
+See nxp/LICENSE and nxp/UPSTREAM.md for attribution and local changes.
+
+Mbed TLS and TF-PSA-Crypto are external dependencies and are not bundled.
+Their original licenses apply when those dependencies are used.
+
+This is an independent project and is not an official NXP SDK.

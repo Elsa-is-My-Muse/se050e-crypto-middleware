@@ -1,0 +1,177 @@
+--- a/tf-psa-crypto/core/psa_crypto.c
++++ b/tf-psa-crypto/core/psa_crypto.c
+@@ -1126,6 +1126,11 @@
+ 
+ psa_status_t psa_remove_key_data_from_memory(psa_key_slot_t *slot)
+ {
++    psa_status_t cleanup_status = PSA_SUCCESS;
++    /* Release owned SE050 RAM objects on normal destroy, failed key creation,
++     * handshake abort, HRR and whole-PSA shutdown. Borrowed identity keys stay. */
++    if (slot->key.bytes && PSA_KEY_LIFETIME_GET_LOCATION(slot->attr.lifetime) == SE050_PSA_LOCATION)
++        cleanup_status = se050_psa_destroy(&slot->attr, slot->key.data, slot->key.bytes);
+ #if defined(MBEDTLS_PSA_STATIC_KEY_SLOTS)
+     if (slot->key.bytes > 0) {
+         mbedtls_platform_zeroize(slot->key.data, MBEDTLS_PSA_STATIC_KEY_SLOT_BUFFER_SIZE);
+@@ -1140,7 +1145,7 @@
+ 
+     slot->key.bytes = 0;
+ 
+-    return PSA_SUCCESS;
++    return cleanup_status;
+ }
+ 
+ /** Completely wipe a slot in memory, including its policy.
+@@ -7723,7 +7728,7 @@
+     if (!PSA_ALG_IS_KEY_AGREEMENT(operation->alg)) {
+         return PSA_ERROR_INVALID_ARGUMENT;
+     }
+-    status = psa_get_and_lock_transparent_key_slot_with_policy(
++    status = psa_get_and_lock_key_slot_with_policy(
+         private_key, &slot, PSA_KEY_USAGE_DERIVE, operation->alg);
+     if (status != PSA_SUCCESS) {
+         return status;
+@@ -7773,7 +7778,7 @@
+         status = PSA_ERROR_INVALID_ARGUMENT;
+         goto exit;
+     }
+-    status = psa_get_and_lock_transparent_key_slot_with_policy(
++    status = psa_get_and_lock_key_slot_with_policy(
+         private_key, &slot, PSA_KEY_USAGE_DERIVE, alg);
+     if (status != PSA_SUCCESS) {
+         goto exit;
+--- a/tf-psa-crypto/core/psa_crypto_driver_wrappers.h
++++ b/tf-psa-crypto/core/psa_crypto_driver_wrappers.h
+@@ -21,6 +21,7 @@
+ 
+ #include "mbedtls/platform.h"
+ #include "mbedtls/constant_time.h"
++#include "se050_psa.h"
+ /* END-common headers */
+ 
+ #if defined(MBEDTLS_PSA_CRYPTO_C)
+@@ -244,6 +245,10 @@
+ 
+     switch( location )
+     {
++        /* SSWL SE050 opaque object references. */
++        case SE050_PSA_LOCATION:
++            return se050_psa_sign(attributes, key_buffer, key_buffer_size, alg, hash, hash_length, signature, signature_size, signature_length);
++
+         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+             /* Key is stored in the slot in export representation, so
+              * cycle through all known transparent accelerators */
+@@ -328,6 +333,12 @@
+     switch( location )
+     {
+         case PSA_KEY_LOCATION_LOCAL_STORAGE:
++            /* SSWL SE050: only unsupported inputs may use the software path.
++             * Invalid signatures or device errors are returned unchanged. */
++            status = se050_psa_verify(attributes, key_buffer, key_buffer_size,
++                                     alg, hash, hash_length, signature, signature_length);
++            if (status != PSA_ERROR_NOT_SUPPORTED) return status;
++
+             /* Key is stored in the slot in export representation, so
+              * cycle through all known transparent accelerators */
+ #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+@@ -648,6 +659,11 @@
+     *key_buffer_size = 0;
+     switch( location )
+     {
++        /* SSWL SE050 opaque object references. */
++        case SE050_PSA_LOCATION:
++            if (data_length != 4) return PSA_ERROR_INVALID_ARGUMENT;
++            return se050_psa_buffer_size(attributes, key_buffer_size);
++
+ #if defined(PSA_CRYPTO_DRIVER_TEST)
+         case PSA_CRYPTO_TEST_DRIVER_LOCATION:
+             *key_buffer_size = mbedtls_test_opaque_size_function( key_type,
+@@ -730,6 +746,9 @@
+                 key_buffer, key_buffer_size, key_buffer_length );
+             break;
+ 
++        case SE050_PSA_LOCATION:
++            return se050_psa_generate(attributes, key_buffer, key_buffer_size, key_buffer_length);
++
+         /* Add cases for opaque driver here */
+ #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+ #if defined(PSA_CRYPTO_DRIVER_TEST)
+@@ -765,6 +784,10 @@
+ 
+     switch( location )
+     {
++        /* SSWL SE050 opaque object references. */
++        case SE050_PSA_LOCATION:
++            return se050_psa_import(attributes, data, data_length, key_buffer, key_buffer_size, key_buffer_length, bits);
++
+         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+             /* Key is stored in the slot in export representation, so
+              * cycle through all known transparent accelerators */
+@@ -2524,6 +2547,10 @@
+ 
+     switch( location )
+     {
++        /* SSWL SE050 opaque object references. */
++        case SE050_PSA_LOCATION:
++            return se050_psa_agreement(attributes, key_buffer, key_buffer_size, alg, peer_key, peer_key_length, shared_secret, shared_secret_size, shared_secret_length);
++
+         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+             /* Key is stored in the slot in export representation, so
+              * cycle through all known transparent accelerators */
+--- a/tf-psa-crypto/core/psa_crypto_driver_wrappers_no_static.c
++++ b/tf-psa-crypto/core/psa_crypto_driver_wrappers_no_static.c
+@@ -20,6 +20,7 @@
+ #include "psa_crypto_rsa.h"
+ 
+ #include "mbedtls/platform.h"
++#include "se050_psa.h"
+ /* END-common headers */
+ 
+ #if defined(MBEDTLS_PSA_CRYPTO_C)
+@@ -84,6 +85,10 @@
+     *key_buffer_size = 0;
+     switch( location )
+     {
++        /* SSWL SE050 opaque object references. */
++        case SE050_PSA_LOCATION:
++            return se050_psa_buffer_size(attributes, key_buffer_size);
++
+ #if defined(PSA_CRYPTO_DRIVER_TEST)
+         case PSA_CRYPTO_TEST_DRIVER_LOCATION:
+ #if defined(MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS)
+@@ -122,6 +127,10 @@
+ 
+     switch( location )
+     {
++        /* SSWL SE050 opaque object references. */
++        case SE050_PSA_LOCATION:
++            return se050_psa_public(attributes, key_buffer, key_buffer_size, data, data_size, data_length);
++
+         case PSA_KEY_LOCATION_LOCAL_STORAGE:
+             /* Key is stored in the slot in export representation, so
+              * cycle through all known transparent accelerators */
+--- a/library/ssl_tls13_generic.c
++++ b/library/ssl_tls13_generic.c
+@@ -25,6 +25,7 @@
+ 
+ #include "psa/crypto.h"
+ #include "psa_util_internal.h"
++#include "se050_psa.h"
+ 
+ #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED)
+ /* Define a local translating function to save code size by not using too many
+@@ -1560,6 +1561,15 @@
+     psa_set_key_type(&key_attributes, handshake->xxdh_psa_type);
+     psa_set_key_bits(&key_attributes, handshake->xxdh_psa_bits);
+ 
++    /* SSWL experiment: generate a fresh transient key inside SE050 for the
++     * NIST curves it supports. Other named groups keep their normal path. */
++    if (se050_offload_ecdh_enabled() && alg == PSA_ALG_ECDH &&
++        key_type == PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1) &&
++        (bits == 256 || bits == 384 || bits == 521)) {
++        psa_set_key_lifetime(&key_attributes, PSA_KEY_LIFETIME_FROM_PERSISTENCE_AND_LOCATION(
++            PSA_KEY_PERSISTENCE_VOLATILE, SE050_PSA_LOCATION));
++    }
++
+     /* Generate ECDH/FFDH private key. */
+     status = psa_generate_key(&key_attributes,
+                               &handshake->xxdh_psa_privkey);

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "description": "SE050E Crypto Middleware: portable core and optional version-specific PSA/Mbed TLS integration.",
+  "core_sources": [
+    "src/se050.c",
+    "src/se050_crypto.c",
+    "nxp/phNxpEsePal_i2c.c",
+    "nxp/phNxpEseProto7816_3.c",
+    "nxp/phNxpEse_Api.c",
+    "nxp/smCom.c",
+    "nxp/smComT1oI2C.c"
+  ],
+  "middleware_sources": [
+    "middleware/mbedtls/se050_psa.c",
+    "middleware/mbedtls/se050_tls.c"
+  ],
+  "core_include_dirs": [
+    "include",
+    "src",
+    "nxp",
+    "port/nxp"
+  ],
+  "compile_definitions": [
+    "T1oI2C",
+    "T1oI2C_UM11225",
+    "AX_EMBEDDED=1",
+    "USE_RTOS=0",
+    "SSS_USE_FTR_FILE"
+  ],
+  "reference_os_include_dirs": [
+    "port/rtthread"
+  ],
+  "reference_platform_sources": [
+    "port/at32f435/se050_i2c_at32f435.c",
+    "port/at32f435/se050_platform_at32f435.c"
+  ],
+  "reference_platform_include_dirs": [
+    "port/at32f435"
+  ],
+  "excluded_from_portable_default": [
+    "adapters/sswl",
+    "testdata",
+    "tests",
+    "hardware flash backups",
+    "private provisioning material"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "stack": "repository-vendored Mbed TLS 4.0.0 + TF-PSA-Crypto",
+  "base_repository_commit": "11e812da970d3ab6f2d6d466c963941089015943",
+  "hash_normalization": "UTF-8 with CRLF normalized to LF",
+  "patch": "se050-stack.patch",
+  "scope": "Only four low-level stack hooks; application identity/entropy/lifecycle integration still required.",
+  "files": [
+    {
+      "path": "tf-psa-crypto/core/psa_crypto.c",
+      "base_sha256_lf": "4e3f7794f46cf6f6f8161f9419a0f64b7e97289d6e9b70ca55561457f983a0f9",
+      "patched_sha256_lf": "ecf8a8fb380f002da8df3eafe94b5f24c7fed33bf1008dbfa196abcae8914408"
+    },
+    {
+      "path": "tf-psa-crypto/core/psa_crypto_driver_wrappers.h",
+      "base_sha256_lf": "1a60d40629a399880d05bee0848c20272826c81e9b89840dda6ab93964efbf44",
+      "patched_sha256_lf": "f3bdb2bb954242aca810ba989772b2bbff975ca8c644f2b9472e0f5bdf0a57fa"
+    },
+    {
+      "path": "tf-psa-crypto/core/psa_crypto_driver_wrappers_no_static.c",
+      "base_sha256_lf": "5ba63fd0c975ea83ea141dfca8b74f2dd11d2f4aab821e04f3e7e946c4cb193a",
+      "patched_sha256_lf": "c29cc17f0bcaae6c3d3c7c708904c3f2a97f9e22f33a453a8c51f3bd486f6c47"
+    },
+    {
+      "path": "library/ssl_tls13_generic.c",
+      "base_sha256_lf": "dcdd7873c40d1d47bf33126cd81c2c9d99cc9827e09dfaae6e431a1e46bc0450",
+      "patched_sha256_lf": "29ffdc152a498c4ec690a5fdf9b73ee461b97239cb323ca02a6cccf235bc2817"
+    }
+  ]
+}

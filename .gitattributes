@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+# Preserve the exact vendor bytes and identify bundled upstream code.
+nxp/** -text -whitespace linguist-vendored=true
+*.patch -text -whitespace
